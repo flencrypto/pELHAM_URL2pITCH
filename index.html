@@ -908,7 +908,7 @@ function inferSector(domain, company){
   if(/account|audit|tax|cpa/.test(d)) return 'Accounting & Finance';
   if(/edu|school|university|learn|train/.test(d)) return 'EdTech';
   if(/insur|assur|underwrite/.test(d)) return 'Insurance';
-  return pick(DATA.sectors);
+  return 'Professional Services';
 }
 function coName(company, domain){
   if(company && company.trim()) return company.trim();
@@ -924,7 +924,7 @@ function generateAnalysis(url, company, mode, project, notes){
   const name   = coName(company, domain);
   const sector = inferSector(domain, name);
   const location = pick(DATA.locations);
-  const attract  = weightedPick(['High','High','High','Medium','Medium','Medium']);
+  const attractiveness  = weightedPick(['High','High','High','Medium','Medium','Medium']);
   const conf     = weightedPick(['High','High','Medium','Medium','Low']);
   const angle    = pick(DATA.angles);
   const timing   = pick(DATA.timings);
@@ -959,7 +959,7 @@ function generateAnalysis(url, company, mode, project, notes){
 
   const miniOutline = [`Cover: ${name} × Pelham Interiors`,`Executive summary: why we're talking`,`Understanding ${name}: what we know`,`Why now: the commercial signals we see`,`The Pelham angle: ${angle}`,`What good looks like: relevant proof`,`Recommended next step`];
 
-  return { name, domain, sector, location, attract, conf, angle, timing, triggers, gaps, dms, buying, projLabel, initials, discoveries, objections, opener, targetText, reasonText, triggerText, angleText, contactText, nextText, linkedinOpener, emailOpener, callOpener, miniOutline, mode, project };
+  return { name, domain, sector, location, attractiveness, conf, angle, timing, triggers, gaps, dms, buying, projLabel, initials, discoveries, objections, opener, targetText, reasonText, triggerText, angleText, contactText, nextText, linkedinOpener, emailOpener, callOpener, miniOutline, mode, project };
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -1031,7 +1031,7 @@ const App = {
   startAnalysis(){
     const url  = document.getElementById('inp-url').value.trim();
     const err  = document.getElementById('err-url');
-    if(!isValidUrl(url)){ err.classList.add('visible'); document.getElementById('inp-url').focus(); return; }
+    if(!isValidUrl(url)){ err.classList.add('visible'); err.setAttribute('aria-live','polite'); document.getElementById('inp-url').focus(); return; }
     err.classList.remove('visible');
 
     const company = document.getElementById('inp-company').value.trim();
@@ -1102,8 +1102,8 @@ const App = {
     document.getElementById('briefSector').textContent = a.sector;
 
     const attrEl = document.getElementById('briefAttract');
-    attrEl.textContent = a.attract+' attractiveness';
-    attrEl.className = 'badge badge-'+(a.attract==='High'?'high':a.attract==='Medium'?'medium':'low');
+    attrEl.textContent = a.attractiveness+' attractiveness';
+    attrEl.className = 'badge badge-'+(a.attractiveness==='High'?'high':a.attractiveness==='Medium'?'medium':'low');
 
     document.getElementById('briefAngle').textContent = a.angle;
 
@@ -1242,7 +1242,7 @@ const App = {
       const ta = document.createElement('textarea');
       ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
       document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
+      document.execCommand('copy'); /* legacy fallback for older browsers */ document.body.removeChild(ta);
       this.toast('Copied to clipboard');
     }
   },
