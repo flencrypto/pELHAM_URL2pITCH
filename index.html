@@ -842,6 +842,7 @@
    DATA
 ───────────────────────────────────────────────────────── */
 const DATA = {
+  sample: { url:'https://www.acme-corp.com', company:'Acme Corporation', mode:'seller-brief', notes:'Target as premium HQ fit-out opportunity' },
   sectors: ['Technology','Professional Services','Financial Services','Legal','Healthcare','Media & Creative','Consulting','Real Estate','Marketing & PR','Architecture & Design','Engineering','Recruitment','Accounting & Finance','EdTech','Fintech','Insurance'],
   angles: ['Workplace refresh / fit-out','Office relocation','Post-merger consolidation','Hybrid workspace transformation','HQ upgrade opportunity'],
   triggers: [
@@ -891,7 +892,7 @@ function extractDomain(url){
 }
 function isValidUrl(v){
   const s = v.trim();
-  if(!s) return false;
+  if(s.length === 0) return false;
   try { new URL(s.startsWith('http')?s:'https://'+s); return true; } catch(e){ return false; }
 }
 function inferSector(domain, company){
@@ -1019,10 +1020,11 @@ const App = {
 
   /* ── Intake ─────────────────────────────────────────── */
   loadSample(){
-    document.getElementById('inp-url').value = 'https://www.acme-corp.com';
-    document.getElementById('inp-company').value = 'Acme Corporation';
-    document.getElementById('inp-mode').value = 'seller-brief';
-    document.getElementById('inp-notes').value = 'Target as premium HQ fit-out opportunity';
+    const s = DATA.sample;
+    document.getElementById('inp-url').value     = s.url;
+    document.getElementById('inp-company').value = s.company;
+    document.getElementById('inp-mode').value    = s.mode;
+    document.getElementById('inp-notes').value   = s.notes;
     document.getElementById('err-url').classList.remove('visible');
   },
 
