@@ -34,10 +34,14 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
   const brief = result.sellerBrief;
 
   const handleCopyLinkedIn = () => {
-    navigator.clipboard?.writeText(brief.linkedinOpener).then(() => showToast('LinkedIn opener copied'));
+    navigator.clipboard?.writeText(brief.linkedinOpener)
+      .then(() => showToast('LinkedIn opener copied'))
+      .catch(() => showToast('Copy failed — please copy manually'));
   };
   const handleCopyEmail = () => {
-    navigator.clipboard?.writeText(brief.emailOpener).then(() => showToast('Email opener copied'));
+    navigator.clipboard?.writeText(brief.emailOpener)
+      .then(() => showToast('Email opener copied'))
+      .catch(() => showToast('Copy failed — please copy manually'));
   };
   const handleCreateDeck = () => router.push(`/analysis/${result.id}/deck`);
 
