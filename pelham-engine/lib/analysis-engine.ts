@@ -12,7 +12,11 @@ function pickN<T>(arr: T[], n: number): T[] {
 }
 
 function generateId(): string {
-  return Math.random().toString(36).slice(2, 11);
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback: combine timestamp and random bits for collision resistance
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 export function generateSlides(a: AnalysisResult): PitchSlide[] {

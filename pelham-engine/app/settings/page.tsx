@@ -32,9 +32,9 @@ export default function SettingsPage() {
       <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 28 }}>Configure default behaviours for the Pelham Prospecting Engine.</p>
 
       <div style={sectionStyle}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Default output mode</div>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>Seller brief is recommended for first-pass analysis.</p>
-        <label style={labelStyle}>Mode</label>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Default deck mode</div>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>The mode used when converting a seller brief into a pitch deck.</p>
+        <label style={labelStyle}>Deck mode</label>
         <select value={deckMode} onChange={e => setDeckMode(e.target.value as typeof deckMode)} style={selectStyle}>
           <option value="customer_pitch">Customer pitch deck</option>
           <option value="internal_deck">Internal qualification deck</option>

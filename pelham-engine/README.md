@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pelham Prospecting Engine
 
-## Getting Started
+An internal sales intelligence tool for Pelham Interiors that converts a company website URL into a structured seller brief, pitch deck, and outreach assets.
 
-First, run the development server:
+## What it does
+
+Paste a company website → the engine analyses the signals and returns:
+
+- **Seller brief** — target, reason, trigger, angle, contact strategy, next steps
+- **Outreach messages** — LinkedIn opener, email opener, call script, discovery questions, objections
+- **Pitch deck** — 12-slide deck personalised to the target company
+- **Confidence and attractiveness scores** — so sellers know how strong the signals are
+
+## Stack
+
+- [Next.js](https://nextjs.org) 16 App Router
+- TypeScript
+- Tailwind CSS 4
+- [Zustand](https://zustand-demo.pmnd.rs/) for client state (with `localStorage` persistence)
+- Radix UI primitives + lucide-react icons
+
+## Getting started
 
 ```bash
+cd pelham-engine
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | Description |
+|---|---|
+| `/` | Intake form — paste a website, select mode and project type |
+| `/analysis/[id]` | Seller brief — 8 collapsible cards + utility panel |
+| `/analysis/[id]/deck` | Pitch deck builder — 12 slides with mode/tone/density controls |
+| `/analysis/[id]/outreach` | Outreach assets — all ready-to-copy messages |
+| `/saved` | Saved analyses (persisted in localStorage) |
+| `/settings` | Default deck mode, tone preferences |
 
-## Learn More
+## Output modes
 
-To learn more about Next.js, take a look at the following resources:
+| Mode | Behaviour |
+|---|---|
+| `seller_brief` | Navigates to seller brief page after analysis |
+| `customer_pitch` | Navigates straight to deck builder after analysis |
+| `internal_deck` | Navigates straight to deck builder after analysis |
+| `quote_stage` | Navigates straight to deck builder after analysis |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+pelham-engine/
+  app/              Next.js App Router pages
+  components/
+    shell/          AppShell, SidebarNav, UtilityPanel, Toast
+    intake/         AnalysisIntakeForm
+    seller/         ProspectHeader, SummaryStrip, SellerBriefCard, CopyActionButton
+    deck/           DeckToolbar, SlideNavigator, SlidePreviewPane
+    outreach/       MessageAssetCard, DiscoveryQuestionsCard, ObjectionsCard
+  lib/
+    types.ts        All TypeScript types
+    analysis-engine.ts  Mock analysis runner + slide generator
+    store.ts        Zustand store
+    mock-data.ts    Sample data arrays
+    formatters.ts   URL/domain/sector utilities
+    scoring.ts      Attractiveness/confidence colour helpers
+```
 
-## Deploy on Vercel
+## Also included
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`index.html` — a self-contained single-file proof-of-concept that runs without a build step. Useful for demos and offline use.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+All analysis currently runs client-side using the mock engine. The server action stubs in `actions/` are ready to be wired to a real LLM backend when available.

@@ -60,7 +60,13 @@ export function AnalysisIntakeForm() {
     const result = runAnalysis(input);
     setCurrentResult(result);
     saveAnalysis(result);
-    router.push(`/analysis/${result.id}`);
+
+    // seller_brief → seller brief page; all other modes go straight to deck builder
+    if (mode === 'seller_brief') {
+      router.push(`/analysis/${result.id}`);
+    } else {
+      router.push(`/analysis/${result.id}/deck`);
+    }
   };
 
   const handleLoadSample = () => {

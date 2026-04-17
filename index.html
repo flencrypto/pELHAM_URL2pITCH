@@ -884,6 +884,15 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function pickN(arr,n){ const s=[...arr]; for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];}return s.slice(0,n); }
 function weightedPick(arr){ return pick(arr); }
 function cap(str){ return str.charAt(0).toUpperCase()+str.slice(1); }
+/** Encode HTML entities to prevent XSS when interpolating into innerHTML. */
+function escHtml(s){
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 function extractDomain(url){
   try {
     const u = new URL(url.startsWith('http')?url:'https://'+url);
@@ -1150,8 +1159,8 @@ const App = {
 
   _para(text){
     return text.split('\n').filter(l=>l.trim()).map(l=>{
-      if(l.startsWith('•')) return `<p style="padding-left:12px;border-left:2px solid rgba(0,212,255,.2);">${l.slice(1).trim()}</p>`;
-      return `<p>${l}</p>`;
+      if(l.startsWith('•')) return `<p style="padding-left:12px;border-left:2px solid rgba(0,212,255,.2);">${escHtml(l.slice(1).trim())}</p>`;
+      return `<p>${escHtml(l)}</p>`;
     }).join('');
   },
 
@@ -1159,26 +1168,26 @@ const App = {
     return `
       <div class="outreach-msg">
         <div class="outreach-msg-label">LinkedIn opener</div>
-        <div class="outreach-msg-text" id="liMsg">${a.linkedinOpener}</div>
+        <div class="outreach-msg-text" id="liMsg">${escHtml(a.linkedinOpener)}</div>
         <button class="btn-copy" onclick="App.copyText(document.getElementById('liMsg').textContent)">Copy</button>
       </div>
       <div class="outreach-msg" style="margin-top:10px;">
         <div class="outreach-msg-label">Email opener</div>
-        <div class="outreach-msg-text" id="emMsg">${a.emailOpener}</div>
+        <div class="outreach-msg-text" id="emMsg">${escHtml(a.emailOpener)}</div>
         <button class="btn-copy" onclick="App.copyText(document.getElementById('emMsg').textContent)">Copy</button>
       </div>
     `;
   },
 
   _bonusBlock(a){
-    const discHtml = a.discoveries.map(d=>`<li>${d}</li>`).join('');
-    const objHtml  = a.objections.map(o=>`<li>${o}</li>`).join('');
-    const deckHtml = a.miniOutline.map(d=>`<li>${d}</li>`).join('');
+    const discHtml = a.discoveries.map(d=>`<li>${escHtml(d)}</li>`).join('');
+    const objHtml  = a.objections.map(o=>`<li>${escHtml(o)}</li>`).join('');
+    const deckHtml = a.miniOutline.map(d=>`<li>${escHtml(d)}</li>`).join('');
     return `
       <div class="bonus-grid">
         <div class="bonus-item">
           <h4>Quick opener script</h4>
-          <p style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;font-style:italic;">${a.opener}</p>
+          <p style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;font-style:italic;">${escHtml(a.opener)}</p>
         </div>
         <div class="bonus-item">
           <h4>Likely objections</h4>
@@ -1197,9 +1206,9 @@ const App = {
   },
 
   _populatePanel(a){
-    document.getElementById('panelGaps').innerHTML = a.gaps.map(g=>`<span class="tag tag-warn">${g}</span>`).join('');
-    document.getElementById('panelTriggers').innerHTML = a.triggers.map(t=>`<span class="tag tag-ok" style="font-size:10px;">${t.split('(')[0].trim()}</span>`).join('');
-    document.getElementById('panelDMs').innerHTML = a.dms.map(d=>`<span class="tag tag-accent">${d}</span>`).join('');
+    document.getElementById('panelGaps').innerHTML = a.gaps.map(g=>`<span class="tag tag-warn">${escHtml(g)}</span>`).join('');
+    document.getElementById('panelTriggers').innerHTML = a.triggers.map(t=>`<span class="tag tag-ok" style="font-size:10px;">${escHtml(t.split('(')[0].trim())}</span>`).join('');
+    document.getElementById('panelDMs').innerHTML = a.dms.map(d=>`<span class="tag tag-accent">${escHtml(d)}</span>`).join('');
   },
 
   _populateOutreach(a){
@@ -1216,8 +1225,8 @@ const App = {
     grid.innerHTML = modules.map((m,mi)=>{
       const bodyId = `omBody_${mi}`;
       const bodyHtml = m.isList
-        ? `<ul class="omodule-list" id="${bodyId}">${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`
-        : `<div class="omodule-body" id="${bodyId}">${m.body}</div>`;
+        ? `<ul class="omodule-list" id="${bodyId}">${m.items.map(i=>`<li>${escHtml(i)}</li>`).join('')}</ul>`
+        : `<div class="omodule-body" id="${bodyId}">${escHtml(m.body)}</div>`;
       const actHtml = m.actions.map(ac=>`<button class="${ac.cls||'btn-accent btn-sm'}" onclick="${ac.fn}">${ac.label}</button>`).join('');
       return `
         <div class="omodule">
@@ -1281,7 +1290,7 @@ const App = {
     nav.innerHTML = this.state.slides.map((s,i)=>`
       <div class="slide-nav-item${i===0?' active':''}" onclick="App.deck.selectSlide(${i})">
         <div class="slide-nav-num">${i+1}</div>
-        <div class="slide-nav-lbl">${s.name}</div>
+        <div class="slide-nav-lbl">${escHtml(s.name)}</div>
       </div>
     `).join('');
   },
@@ -1291,7 +1300,7 @@ const App = {
     document.getElementById('slideEyebrow').textContent = s.eyebrow;
     document.getElementById('slideTitle').textContent   = s.title;
     document.getElementById('slideSubtitle').textContent = s.subtitle;
-    document.getElementById('slideBullets').innerHTML = s.bullets.map(b=>`<li class="slide-bullet">${b}</li>`).join('');
+    document.getElementById('slideBullets').innerHTML = s.bullets.map(b=>`<li class="slide-bullet">${escHtml(b)}</li>`).join('');
     document.getElementById('slideNotes').textContent = s.notes || 'No presenter notes for this slide.';
 
     document.querySelectorAll('.slide-nav-item').forEach((el,idx)=>el.classList.toggle('active',idx===i));
