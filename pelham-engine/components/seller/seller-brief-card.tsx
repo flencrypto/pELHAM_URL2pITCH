@@ -13,6 +13,7 @@ interface SellerBriefCardProps {
 
 export function SellerBriefCard({ num, title, subtitle, defaultOpen = false, children }: SellerBriefCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const contentId = `sbc-body-${num}`;
 
   return (
     <div style={{
@@ -24,7 +25,10 @@ export function SellerBriefCard({ num, title, subtitle, defaultOpen = false, chi
       transition: 'border-color .15s',
     }}>
       <button
+        type="button"
         onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-controls={contentId}
         style={{
           width: '100%', padding: '16px 20px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -58,7 +62,7 @@ export function SellerBriefCard({ num, title, subtitle, defaultOpen = false, chi
       </button>
 
       {open && (
-        <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--glass-border)' }}>
+        <div id={contentId} style={{ padding: '0 20px 20px', borderTop: '1px solid var(--glass-border)' }}>
           <div style={{ paddingTop: 16 }}>
             {children}
           </div>

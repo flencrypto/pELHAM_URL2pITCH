@@ -75,4 +75,4 @@ pelham-engine/
 
 ## Notes
 
-All analysis currently runs client-side using the mock engine. The server action stubs in `actions/` are ready to be wired to a real LLM backend when available.
+All analysis currently runs client-side using the mock engine. It can be wired to a real LLM backend when available.

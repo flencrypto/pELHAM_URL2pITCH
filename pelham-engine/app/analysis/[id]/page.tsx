@@ -33,13 +33,43 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
 
   const brief = result.sellerBrief;
 
+  const copyText = (text: string): Promise<void> => {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise<void>((resolve, reject) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('aria-hidden', 'true');
+      ta.tabIndex = -1;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      ta.style.pointerEvents = 'none';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        if (document.execCommand('copy')) {
+          resolve();
+        } else {
+          reject(new Error('execCommand copy failed'));
+        }
+      } catch (err) {
+        reject(err);
+      } finally {
+        if (ta.parentNode) {
+          ta.parentNode.removeChild(ta);
+        }
+      }
+    });
+  };
+
   const handleCopyLinkedIn = () => {
-    navigator.clipboard?.writeText(brief.linkedinOpener)
+    copyText(brief.linkedinOpener)
       .then(() => showToast('LinkedIn opener copied'))
       .catch(() => showToast('Copy failed — please copy manually'));
   };
   const handleCopyEmail = () => {
-    navigator.clipboard?.writeText(brief.emailOpener)
+    copyText(brief.emailOpener)
       .then(() => showToast('Email opener copied'))
       .catch(() => showToast('Copy failed — please copy manually'));
   };
