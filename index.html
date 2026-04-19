@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pelham Prospecting Engine</title>
+  <style>
+    :root {
+      --bg-body: #0d0f14;
+      --bg-card: #141720;
+      --bg-card-alt: #181c28;
+      --accent: #00d4ff;
+      --accent-dim: rgba(0,212,255,0.12);
+      --accent-glow: rgba(0,212,255,0.3);
+      --violet: #7c3aed;
+      --violet-dim: rgba(124,58,237,0.15);
+      --glass-bg: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+      --text-primary: #f0f2f7;
+      --text-secondary: #8b92a8;
+      --text-muted: #4e5569;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --sidebar-w: 200px;
+      --panel-w: 280px;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg-body); color:var(--text-primary); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+    ::-webkit-scrollbar { width:4px; height:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:2px; }
+
+    /* ── Shell ─────────────────────────────────────────── */
+    .app-shell {
+      display:grid;
+      grid-template-columns:var(--sidebar-w) 1fr var(--panel-w);
+      grid-template-rows:100vh;
+      height:100vh;
+      overflow:hidden;
+    }
+    .app-shell.no-panel { grid-template-columns:var(--sidebar-w) 1fr; }
+
+    /* ── Sidebar ────────────────────────────────────────── */
+    .sidebar {
+      background:linear-gradient(180deg,rgba(20,23,32,0.98) 0%,rgba(13,15,20,0.98) 100%);
+      border-right:1px solid var(--glass-border);
+      display:flex; flex-direction:column;
+      overflow:hidden;
+      position:relative;
+      z-index:20;
+    }
+    .sidebar-brand { padding:22px 16px 18px; border-bottom:1px solid var(--glass-border); }
+    .sidebar-brand-icon {
+      width:34px; height:34px;
+      background:linear-gradient(135deg,var(--accent),var(--violet));
+      border-radius:9px; margin-bottom:10px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:17px;
+    }
+    .sidebar-brand-name { font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-primary); line-height:1.3; }
+    .sidebar-brand-sub { font-size:10px; color:var(--accent); margin-top:3px; letter-spacing:0.05em; text-transform:uppercase; opacity:.7; }
+    .sidebar-nav { flex:1; padding:10px 8px; overflow-y:auto; }
+    .nav-group-label { font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-muted); padding:14px 8px 5px; font-weight:700; }
+    .nav-item {
+      display:flex; align-items:center; gap:9px;
+      padding:8px 10px; border-radius:8px; cursor:pointer;
+      color:var(--text-secondary); font-size:13px; font-weight:500;
+      transition:all .15s; margin-bottom:1px; border:1px solid transparent;
+      user-select:none;
+    }
+    .nav-item:hover { background:var(--glass-bg); color:var(--text-primary); }
+    .nav-item.active { background:var(--accent-dim); color:var(--accent); border-color:rgba(0,212,255,.18); }
+    .nav-item svg { flex-shrink:0; }
+    .sidebar-footer { padding:14px 16px; border-top:1px solid var(--glass-border); }
+    .sidebar-footer p { font-size:10px; color:var(--text-muted); text-align:center; letter-spacing:.04em; }
+
+    /* ── Main Workspace ─────────────────────────────────── */
+    .main-workspace { overflow:hidden; height:100%; position:relative; }
+    .screen { display:none; height:100%; overflow-y:auto; overflow-x:hidden; }
+    .screen.active { display:block; }
+    #screen-deck.active { display:flex; flex-direction:column; overflow:hidden; }
+    #screen-brief.active { display:flex; flex-direction:column; overflow:hidden; }
+
+    /* ── Utility Panel ──────────────────────────────────── */
+    .utility-panel {
+      border-left:1px solid var(--glass-border);
+      background:rgba(18,21,30,0.7);
+      backdrop-filter:blur(20px);
+      overflow-y:auto;
+      padding:20px 14px;
+    }
+    .panel-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; }
+    .panel-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:10px; padding:13px 14px; margin-bottom:8px; }
+    .panel-card-title { font-size:12px; font-weight:700; color:var(--text-primary); margin-bottom:8px; }
+    .panel-card p { font-size:12px; color:var(--text-secondary); line-height:1.6; }
+    .panel-section { margin-bottom:20px; }
+    .tag-cloud { display:flex; flex-wrap:wrap; gap:5px; }
+    .tag { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:100px; font-size:11px; font-weight:500; }
+    .tag-default { background:rgba(255,255,255,.05); border:1px solid var(--glass-border); color:var(--text-secondary); }
+    .tag-warn { background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.25); color:#fbbf24; }
+    .tag-ok { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25); color:#4ade80; }
+    .tag-accent { background:var(--accent-dim); border:1px solid rgba(0,212,255,.2); color:var(--accent); }
+    .tag-violet { background:rgba(124,58,237,.15); border:1px solid rgba(124,58,237,.3); color:#a78bfa; }
+    .panel-btn {
+      display:flex; align-items:center; gap:8px;
+      width:100%; padding:9px 12px; border-radius:8px;
+      font-size:12px; font-weight:600; cursor:pointer;
+      border:1px solid var(--glass-border); background:transparent;
+      color:var(--text-secondary); transition:all .15s; font-family:inherit;
+      margin-bottom:6px; text-align:left;
+    }
+    .panel-btn:hover { background:var(--glass-bg); color:var(--text-primary); border-color:rgba(255,255,255,.14); }
+    .panel-btn.primary { background:var(--accent-dim); border-color:rgba(0,212,255,.22); color:var(--accent); }
+    .panel-btn.primary:hover { background:rgba(0,212,255,.2); }
+    .panel-btn.violet { background:var(--violet-dim); border-color:rgba(124,58,237,.3); color:#a78bfa; }
+    .panel-btn.violet:hover { background:rgba(124,58,237,.22); }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:7px;
+      padding:10px 18px; border-radius:8px; font-size:14px; font-weight:600;
+      cursor:pointer; border:none; transition:all .15s; white-space:nowrap;
+      font-family:inherit; text-decoration:none;
+    }
+    .btn-primary { background:linear-gradient(135deg,var(--accent),#0099bb); color:#000; }
+    .btn-primary:hover { box-shadow:0 4px 20px var(--accent-glow); transform:translateY(-1px); }
+    .btn-primary:active { transform:translateY(0); }
+    .btn-secondary { background:transparent; color:var(--text-secondary); border:1px solid var(--glass-border); }
+    .btn-secondary:hover { border-color:rgba(255,255,255,.18); color:var(--text-primary); background:var(--glass-bg); }
+    .btn-ghost { background:transparent; color:var(--text-muted); border:1px solid transparent; padding:6px 12px; font-size:12px; }
+    .btn-ghost:hover { color:var(--text-secondary); background:var(--glass-bg); border-color:var(--glass-border); }
+    .btn-accent { background:var(--accent-dim); color:var(--accent); border:1px solid rgba(0,212,255,.2); }
+    .btn-accent:hover { background:rgba(0,212,255,.2); }
+    .btn-sm { padding:5px 12px; font-size:12px; border-radius:6px; }
+    .btn-full { width:100%; }
+    .btn-copy {
+      background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.22);
+      color:var(--accent); border-radius:6px; padding:4px 11px;
+      font-size:11px; font-weight:700; cursor:pointer;
+      transition:all .15s; font-family:inherit;
+    }
+    .btn-copy:hover { background:rgba(0,212,255,.2); }
+
+    /* ── Badges ─────────────────────────────────────────── */
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:.03em; }
+    .badge-high { background:rgba(34,197,94,.12); color:#4ade80; border:1px solid rgba(34,197,94,.28); }
+    .badge-medium { background:rgba(245,158,11,.12); color:#fbbf24; border:1px solid rgba(245,158,11,.28); }
+    .badge-low { background:rgba(239,68,68,.12); color:#f87171; border:1px solid rgba(239,68,68,.28); }
+    .badge-conf-high { background:var(--accent-dim); color:var(--accent); border:1px solid rgba(0,212,255,.25); }
+    .badge-conf-medium { background:rgba(245,158,11,.12); color:#fbbf24; border:1px solid rgba(245,158,11,.25); }
+    .badge-conf-low { background:rgba(100,116,139,.18); color:#94a3b8; border:1px solid rgba(100,116,139,.3); }
+    .badge-sector { background:var(--violet-dim); color:#a78bfa; border:1px solid rgba(124,58,237,.28); }
+    .badge-angle { background:var(--accent-dim); color:var(--accent); border:1px solid rgba(0,212,255,.18); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* ── Forms ──────────────────────────────────────────── */
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    .form-label { font-size:11px; font-weight:700; color:var(--text-secondary); letter-spacing:.05em; text-transform:uppercase; }
+    .form-input,.form-select,.form-textarea {
+      background:rgba(255,255,255,.04); border:1px solid var(--glass-border);
+      border-radius:8px; color:var(--text-primary); font-size:14px;
+      padding:10px 12px; outline:none; transition:all .15s; font-family:inherit;
+    }
+    .form-input:focus,.form-select:focus,.form-textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,212,255,.1); }
+    .form-input::placeholder,.form-textarea::placeholder { color:var(--text-muted); }
+    .form-select option { background:#1a1e2d; color:var(--text-primary); }
+    .form-textarea { resize:vertical; min-height:76px; }
+    .form-error { color:var(--danger); font-size:12px; margin-top:3px; display:none; }
+    .form-error.visible { display:block; }
+    .form-row { display:grid; gap:14px; margin-bottom:14px; }
+    .form-row-2 { grid-template-columns:1fr 1fr; }
+
+    /* ── Screen: Intake ─────────────────────────────────── */
+    #screen-intake { padding:44px 40px; }
+    .intake-wrap { max-width:680px; }
+    .screen-eyebrow { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:10px; font-weight:700; }
+    .screen-heading { font-size:26px; font-weight:700; color:var(--text-primary); margin-bottom:10px; letter-spacing:-.02em; }
+    .screen-subheading { font-size:14px; color:var(--text-secondary); margin-bottom:32px; line-height:1.65; max-width:520px; }
+    .intake-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:16px; padding:26px; }
+    .form-actions { display:flex; gap:10px; margin-top:18px; }
+    .form-microcopy { margin-top:14px; font-size:12px; color:var(--text-muted); display:flex; align-items:flex-start; gap:6px; line-height:1.5; }
+
+    /* ── Screen: Progress ───────────────────────────────── */
+    #screen-progress { padding:44px 40px; }
+    .progress-wrap { max-width:640px; }
+    .progress-bar-track { background:rgba(255,255,255,.06); border-radius:100px; height:3px; margin:22px 0; overflow:hidden; }
+    .progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--violet),var(--accent)); border-radius:100px; width:0%; transition:width .55s cubic-bezier(.4,0,.2,1); }
+    .steps-list { display:flex; flex-direction:column; gap:2px; margin:24px 0; }
+    .step-row { display:flex; align-items:center; gap:13px; padding:10px 14px; border-radius:10px; transition:background .3s; }
+    .step-row.is-active { background:rgba(0,212,255,.05); }
+    .step-circle {
+      width:28px; height:28px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:700; flex-shrink:0;
+      border:2px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);
+      color:var(--text-muted); transition:all .35s;
+    }
+    .step-row.is-active .step-circle { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); animation:pulse-step 1.6s ease-in-out infinite; }
+    .step-row.is-done .step-circle { background:rgba(34,197,94,.12); border-color:var(--success); color:var(--success); animation:none; }
+    @keyframes pulse-step { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.3);} 50%{box-shadow:0 0 0 6px rgba(0,212,255,0);} }
+    .step-text { font-size:14px; font-weight:500; color:var(--text-muted); transition:color .3s; }
+    .step-row.is-active .step-text { color:var(--text-primary); }
+    .step-row.is-done .step-text { color:var(--text-secondary); }
+    .metrics-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:24px; }
+    .metric-tile { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:10px; padding:11px 10px; text-align:center; }
+    .metric-tile-label { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:5px; }
+    .metric-tile-val { font-size:13px; font-weight:700; color:var(--accent); }
+    .metric-tile-val.dim { color:var(--text-secondary); }
+    .progress-footer-note { margin-top:24px; font-size:12px; color:var(--text-muted); text-align:center; font-style:italic; line-height:1.6; }
+
+    /* ── Screen: Brief ──────────────────────────────────── */
+    .brief-header {
+      background:var(--bg-card); border-bottom:1px solid var(--glass-border);
+      padding:18px 28px; display:flex; align-items:center;
+      justify-content:space-between; flex-wrap:wrap; gap:10px;
+      position:sticky; top:0; z-index:10; flex-shrink:0;
+    }
+    .co-info { display:flex; align-items:center; gap:12px; }
+    .co-avatar {
+      width:40px; height:40px; border-radius:10px; flex-shrink:0;
+      background:linear-gradient(135deg,var(--violet-dim),var(--accent-dim));
+      border:1px solid var(--glass-border);
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; font-weight:800; color:var(--accent);
+    }
+    .co-name { font-size:17px; font-weight:700; letter-spacing:-.01em; }
+    .co-domain { font-size:12px; color:var(--text-muted); margin-top:1px; }
+    .header-badge-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .brief-scroll { flex:1; overflow-y:auto; }
+    #screen-brief { padding:0; }
+    .brief-body { padding:26px 28px; max-width:860px; }
+    .brief-page-label { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:5px; font-weight:700; }
+    .brief-page-title { font-size:22px; font-weight:700; margin-bottom:22px; letter-spacing:-.02em; }
+    .summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:26px; }
+    .sum-tile { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:10px; padding:13px 14px; }
+    .sum-tile-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:5px; }
+    .sum-tile-val { font-size:13px; font-weight:700; color:var(--text-primary); line-height:1.3; }
+    .sum-tile-val.accent { color:var(--accent); }
+    .brief-cards { display:flex; flex-direction:column; gap:8px; }
+
+    /* Collapsible card */
+    .bcard { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:12px; overflow:hidden; transition:border-color .2s; }
+    .bcard:hover { border-color:rgba(255,255,255,.12); }
+    .bcard.open { border-color:rgba(0,212,255,.2); }
+    .bcard-hd {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px; cursor:pointer; user-select:none;
+    }
+    .bcard-hd:hover { background:rgba(255,255,255,.015); }
+    .bcard-hd-left { display:flex; align-items:center; gap:11px; }
+    .bcard-num {
+      width:22px; height:22px; border-radius:6px;
+      background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.18);
+      display:flex; align-items:center; justify-content:center;
+      font-size:10px; font-weight:700; color:var(--accent); flex-shrink:0;
+    }
+    .bcard-title { font-size:14px; font-weight:600; }
+    .bcard-sub { font-size:11px; color:var(--text-muted); margin-top:1px; }
+    .bcard-chevron { color:var(--text-muted); transition:transform .3s; flex-shrink:0; }
+    .bcard.open .bcard-chevron { transform:rotate(180deg); }
+    .bcard-body { display:none; padding:0 18px 18px; border-top:1px solid var(--glass-border); }
+    .bcard.open .bcard-body { display:block; }
+    .bcard-text { font-size:13.5px; color:var(--text-secondary); line-height:1.72; margin-top:14px; }
+    .bcard-text p { margin-bottom:9px; }
+    .bcard-text p:last-child { margin-bottom:0; }
+
+    /* Outreach messages */
+    .outreach-msg {
+      background:rgba(0,212,255,.04); border:1px solid rgba(0,212,255,.12);
+      border-radius:8px; padding:13px 44px 13px 13px;
+      margin-top:12px; position:relative;
+    }
+    .outreach-msg-label { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); font-weight:700; margin-bottom:7px; }
+    .outreach-msg-text { font-size:13px; color:var(--text-secondary); line-height:1.68; white-space:pre-wrap; font-family:inherit; }
+    .outreach-msg .btn-copy { position:absolute; top:10px; right:10px; }
+
+    /* Bonus tools */
+    .bonus-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+    .bonus-item h4 { font-size:10px; color:var(--accent); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:8px; }
+    .bonus-item ul { list-style:none; padding:0; }
+    .bonus-item ul li { font-size:12.5px; color:var(--text-secondary); padding:4px 0; border-bottom:1px solid rgba(255,255,255,.04); line-height:1.5; }
+    .bonus-item ul li:last-child { border-bottom:none; }
+    .bonus-item ul li::before { content:'→ '; color:var(--accent); opacity:.5; }
+
+    /* ── Screen: Deck ───────────────────────────────────── */
+    .deck-toolbar {
+      background:var(--bg-card); border-bottom:1px solid var(--glass-border);
+      padding:11px 20px; display:flex; align-items:center; gap:14px;
+      flex-wrap:wrap; flex-shrink:0;
+    }
+    .deck-tb-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; }
+    .deck-title-inp {
+      background:rgba(255,255,255,.04); border:1px solid var(--glass-border);
+      border-radius:6px; color:var(--text-primary); font-size:13px;
+      padding:6px 10px; outline:none; width:180px; font-family:inherit;
+    }
+    .deck-title-inp:focus { border-color:var(--accent); }
+    .tb-sep { width:1px; height:18px; background:var(--glass-border); flex-shrink:0; }
+    .toggle-group { display:flex; gap:2px; background:rgba(255,255,255,.04); border:1px solid var(--glass-border); border-radius:6px; padding:2px; }
+    .tg-btn { padding:4px 10px; border-radius:4px; font-size:11px; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--text-muted); transition:all .15s; font-family:inherit; }
+    .tg-btn.active { background:var(--accent-dim); color:var(--accent); }
+    .deck-body { flex:1; display:grid; grid-template-columns:210px 1fr 230px; overflow:hidden; }
+    .slide-nav { border-right:1px solid var(--glass-border); overflow-y:auto; padding:14px 10px; background:rgba(18,21,30,.5); }
+    .slide-nav-title { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); padding:0 4px 8px; }
+    .slide-nav-item { display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; margin-bottom:2px; transition:all .15s; border:1px solid transparent; }
+    .slide-nav-item:hover { background:var(--glass-bg); }
+    .slide-nav-item.active { background:var(--accent-dim); border-color:rgba(0,212,255,.15); }
+    .slide-nav-num { width:20px; height:20px; border-radius:4px; background:rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:var(--text-muted); flex-shrink:0; }
+    .slide-nav-item.active .slide-nav-num { background:var(--accent-dim); color:var(--accent); }
+    .slide-nav-lbl { font-size:12px; color:var(--text-secondary); font-weight:500; line-height:1.3; }
+    .slide-nav-item.active .slide-nav-lbl { color:var(--accent); }
+    .slide-preview-panel { overflow-y:auto; padding:22px; display:flex; align-items:flex-start; justify-content:center; }
+    .slide-card {
+      background:linear-gradient(160deg,#1a1e2d,#141720);
+      border:1px solid var(--glass-border); border-radius:14px;
+      width:100%; max-width:660px; min-height:400px; padding:38px;
+      position:relative; overflow:hidden; flex-shrink:0;
+    }
+    .slide-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--violet),var(--accent)); }
+    .slide-eyebrow { font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--accent); font-weight:700; margin-bottom:9px; }
+    .slide-title { font-size:22px; font-weight:700; letter-spacing:-.02em; margin-bottom:7px; line-height:1.2; }
+    .slide-subtitle { font-size:13px; color:var(--text-secondary); margin-bottom:24px; line-height:1.5; }
+    .slide-bullets { list-style:none; padding:0; display:flex; flex-direction:column; gap:11px; }
+    .slide-bullet { display:flex; gap:11px; font-size:13.5px; color:var(--text-secondary); line-height:1.55; }
+    .slide-bullet::before { content:''; width:5px; height:5px; border-radius:50%; background:var(--accent); flex-shrink:0; margin-top:7px; }
+    .slide-footer-brand { position:absolute; bottom:18px; right:22px; font-size:10px; color:var(--text-muted); letter-spacing:.06em; font-weight:600; }
+    .deck-ctrl { border-left:1px solid var(--glass-border); padding:18px 14px; overflow-y:auto; background:rgba(18,21,30,.5); }
+    .deck-ctrl-title { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; }
+    .deck-ctrl-section { margin-bottom:18px; }
+    .deck-ctrl-section .panel-btn { margin-bottom:5px; font-size:11.5px; }
+
+    /* ── Screen: Outreach ───────────────────────────────── */
+    #screen-outreach { padding:34px 36px; }
+    .outreach-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px; }
+    .omodule { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:12px; padding:18px; }
+    .omodule-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:11px; }
+    .omodule-title { font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; }
+    .omodule-icon { width:26px; height:26px; border-radius:7px; background:var(--accent-dim); display:flex; align-items:center; justify-content:center; font-size:13px; }
+    .omodule-body { font-size:13px; color:var(--text-secondary); line-height:1.65; margin-bottom:12px; white-space:pre-wrap; }
+    .omodule-list { list-style:none; padding:0; }
+    .omodule-list li { font-size:12.5px; color:var(--text-secondary); padding:5px 0; border-bottom:1px solid rgba(255,255,255,.04); line-height:1.55; }
+    .omodule-list li:last-child { border-bottom:none; }
+    .omodule-list li::before { content:'→ '; color:var(--accent); opacity:.5; }
+    .omodule-actions { display:flex; gap:7px; flex-wrap:wrap; }
+
+    /* ── Screen: Settings ───────────────────────────────── */
+    #screen-settings { padding:34px 36px; }
+    .settings-max { max-width:600px; }
+    .settings-block { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:12px; padding:22px; margin-bottom:16px; }
+    .settings-block-title { font-size:14px; font-weight:700; margin-bottom:16px; }
+    .settings-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+    .settings-row:last-child { border-bottom:none; }
+    .settings-row-label { font-size:13px; color:var(--text-secondary); }
+    .settings-row-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .settings-val { font-size:12px; color:var(--text-muted); }
+
+    /* ── Screen: Saved (empty) ──────────────────────────── */
+    #screen-saved { padding:32px 36px; }
+    .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 40px; text-align:center; }
+    .empty-state-icon { font-size:40px; margin-bottom:16px; opacity:.3; }
+    .empty-state-title { font-size:16px; font-weight:600; color:var(--text-secondary); margin-bottom:8px; }
+    .empty-state-sub { font-size:13px; color:var(--text-muted); max-width:300px; line-height:1.6; }
+
+    /* ── Toast ──────────────────────────────────────────── */
+    #toast {
+      position:fixed; bottom:22px; right:22px;
+      background:rgba(34,197,94,.14); border:1px solid rgba(34,197,94,.28);
+      color:#4ade80; padding:10px 16px; border-radius:10px;
+      font-size:13px; font-weight:600; z-index:9999;
+      display:flex; align-items:center; gap:8px;
+      transform:translateY(60px); opacity:0; transition:all .3s ease;
+      backdrop-filter:blur(14px); pointer-events:none;
+    }
+    #toast.visible { transform:translateY(0); opacity:1; }
+
+    /* ── Misc utilities ─────────────────────────────────── */
+    .divider { height:1px; background:var(--glass-border); margin:20px 0; }
+    .flex { display:flex; }
+    .items-center { align-items:center; }
+    .gap-8 { gap:8px; }
+    .mt-8 { margin-top:8px; }
+    .mt-16 { margin-top:16px; }
+    .mb-12 { margin-bottom:12px; }
+    .text-accent { color:var(--accent); }
+    .text-muted { color:var(--text-muted); }
+    .text-secondary { color:var(--text-secondary); }
+    .font-bold { font-weight:700; }
+    .text-sm { font-size:12px; }
+    .spin { animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Hover lift for glass cards */
+    .lift { transition:transform .2s, box-shadow .2s; }
+    .lift:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,0,0,.25); }
+  </style>
+</head>
+<body>
+
+<div class="app-shell" id="appShell">
+
+  <!-- ── SIDEBAR ───────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      <div class="sidebar-brand-name">Pelham Prospecting Engine</div>
+      <div class="sidebar-brand-sub">Commercial Intelligence</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">Workspace</div>
+      <div class="nav-item active" data-target="intake" onclick="App.nav('intake',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        New Analysis
+      </div>
+      <div class="nav-item" data-target="saved" onclick="App.nav('saved',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Saved Analyses
+      </div>
+      <div class="nav-group-label">Output</div>
+      <div class="nav-item" data-target="brief" onclick="App.nav('brief',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Seller Brief
+      </div>
+      <div class="nav-item" data-target="deck" onclick="App.nav('deck',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Pitch Deck
+      </div>
+      <div class="nav-item" data-target="outreach" onclick="App.nav('outreach',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Outreach Assets
+      </div>
+      <div class="nav-group-label">Config</div>
+      <div class="nav-item" data-target="settings" onclick="App.nav('settings',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <p>Pelham Interiors · Internal use only</p>
+    </div>
+  </aside>
+
+  <!-- ── MAIN WORKSPACE ────────────────────────────────── -->
+  <main class="main-workspace" id="mainWorkspace">
+
+    <!-- Screen 1: Intake -->
+    <section id="screen-intake" class="screen active">
+      <div class="intake-wrap" style="padding:44px 40px;">
+        <div class="screen-eyebrow">New Analysis</div>
+        <h1 class="screen-heading">Start a new company analysis</h1>
+        <p class="screen-subheading">Paste a company website and the engine will research the business, rank the strongest Pelham angle and generate a seller-ready brief.</p>
+        <div class="intake-card">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Company website *</label>
+              <input class="form-input" id="inp-url" type="url" placeholder="https://companysite.com" autocomplete="off">
+              <div class="form-error" id="err-url">Please enter a valid website URL (e.g. https://example.com)</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Company name <span style="font-weight:400;text-transform:none;color:var(--text-muted)">(optional)</span></label>
+              <input class="form-input" id="inp-company" type="text" placeholder="Acme Corporation">
+            </div>
+          </div>
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label class="form-label">Output mode</label>
+              <select class="form-select" id="inp-mode">
+                <option value="seller-brief">Seller brief</option>
+                <option value="customer-pitch">Customer pitch deck</option>
+                <option value="internal-qual">Internal qualification deck</option>
+                <option value="quotation-proposal">Quotation-stage proposal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Project type</label>
+              <select class="form-select" id="inp-project">
+                <option value="auto">Auto-detect</option>
+                <option value="fitout">Fit-out</option>
+                <option value="refurb">Refurbishment</option>
+                <option value="relocation">Relocation</option>
+                <option value="reconfig">Reconfiguration</option>
+                <option value="expansion">Expansion</option>
+                <option value="consolidation">Consolidation</option>
+                <option value="consultancy">Workplace consultancy</option>
+                <option value="furniture">Furniture / move management</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Notes / context <span style="font-weight:400;text-transform:none;color:var(--text-muted)">(optional)</span></label>
+              <textarea class="form-textarea" id="inp-notes" placeholder="Add anything you already know about this company or what you are looking for…"></textarea>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary btn-full" onclick="App.startAnalysis()">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Analyse company
+            </button>
+            <button class="btn btn-secondary" onclick="App.loadSample()" style="white-space:nowrap;">Load sample</button>
+          </div>
+          <p class="form-microcopy">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px;opacity:.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            The first pass will generate a seller brief before any deck is created.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 2: Progress -->
+    <section id="screen-progress" class="screen">
+      <div class="progress-wrap" style="padding:44px 40px;">
+        <div class="screen-eyebrow">Engine running</div>
+        <h1 class="screen-heading">Analysing company</h1>
+        <p class="screen-subheading">The engine is crawling the site, extracting commercial signals and ranking the strongest Pelham opportunity.</p>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+        <div class="steps-list" id="stepsList">
+          <div class="step-row" data-step="0">
+            <div class="step-circle">1</div>
+            <span class="step-text">Checking website</span>
+          </div>
+          <div class="step-row" data-step="1">
+            <div class="step-circle">2</div>
+            <span class="step-text">Reading core pages</span>
+          </div>
+          <div class="step-row" data-step="2">
+            <div class="step-circle">3</div>
+            <span class="step-text">Extracting workplace signals</span>
+          </div>
+          <div class="step-row" data-step="3">
+            <div class="step-circle">4</div>
+            <span class="step-text">Detecting commercial triggers</span>
+          </div>
+          <div class="step-row" data-step="4">
+            <div class="step-circle">5</div>
+            <span class="step-text">Ranking Pelham angles</span>
+          </div>
+          <div class="step-row" data-step="5">
+            <div class="step-circle">6</div>
+            <span class="step-text">Writing seller brief</span>
+          </div>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-tile"><div class="metric-tile-label">Website</div><div class="metric-tile-val dim" id="m-web">—</div></div>
+          <div class="metric-tile"><div class="metric-tile-label">Pages</div><div class="metric-tile-val dim" id="m-pages">—</div></div>
+          <div class="metric-tile"><div class="metric-tile-label">Signals</div><div class="metric-tile-val dim" id="m-signals">—</div></div>
+          <div class="metric-tile"><div class="metric-tile-label">Confidence</div><div class="metric-tile-val dim" id="m-conf">—</div></div>
+          <div class="metric-tile"><div class="metric-tile-label">Top angle</div><div class="metric-tile-val dim" id="m-angle">—</div></div>
+        </div>
+        <p class="progress-footer-note">This usually takes a moment. We are building seller intelligence, not just scraping copy.</p>
+      </div>
+    </section>
+
+    <!-- Screen 3: Seller Brief -->
+    <section id="screen-brief" class="screen">
+      <div class="brief-header">
+        <div class="co-info">
+          <div class="co-avatar" id="briefAvatar">A</div>
+          <div>
+            <div class="co-name" id="briefCompany">Company Name</div>
+            <div class="co-domain" id="briefDomain">domain.com</div>
+          </div>
+        </div>
+        <div class="header-badge-row">
+          <span class="badge badge-sector" id="briefSector">Sector</span>
+          <span class="badge" id="briefAttract">High</span>
+          <span class="badge badge-angle" id="briefAngle">Angle</span>
+          <span class="badge" id="briefConf">Confidence</span>
+        </div>
+      </div>
+      <div class="brief-scroll">
+        <div class="brief-body">
+          <div class="brief-page-label">Output</div>
+          <h2 class="brief-page-title">Seller brief</h2>
+          <div class="summary-strip">
+            <div class="sum-tile"><div class="sum-tile-label">Primary angle</div><div class="sum-tile-val accent" id="sum-angle">—</div></div>
+            <div class="sum-tile"><div class="sum-tile-label">Best trigger</div><div class="sum-tile-val" id="sum-trigger">—</div></div>
+            <div class="sum-tile"><div class="sum-tile-label">Project type</div><div class="sum-tile-val" id="sum-project">—</div></div>
+            <div class="sum-tile"><div class="sum-tile-label">Buying motion</div><div class="sum-tile-val" id="sum-buying">—</div></div>
+          </div>
+          <div class="brief-cards" id="briefCards">
+            <!-- Cards injected by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 4: Pitch Deck -->
+    <section id="screen-deck" class="screen">
+      <div class="deck-toolbar">
+        <div class="flex items-center gap-8">
+          <span class="deck-tb-label">Title</span>
+          <input class="deck-title-inp" id="deckTitleInput" type="text" value="Pitch Deck">
+        </div>
+        <div class="tb-sep"></div>
+        <div class="flex items-center gap-8">
+          <span class="deck-tb-label">Mode</span>
+          <div class="toggle-group" id="deckModeToggle">
+            <button class="tg-btn active" onclick="App.deck.setToggle(this,'deckModeToggle')">Customer pitch</button>
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckModeToggle')">Internal deck</button>
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckModeToggle')">Quote stage</button>
+          </div>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="flex items-center gap-8">
+          <span class="deck-tb-label">Brand</span>
+          <div class="toggle-group" id="deckBrandToggle">
+            <button class="tg-btn active" onclick="App.deck.setToggle(this,'deckBrandToggle')">Pelham Interiors</button>
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckBrandToggle')">Pelham × Client</button>
+          </div>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="flex items-center gap-8">
+          <span class="deck-tb-label">Tone</span>
+          <div class="toggle-group" id="deckToneToggle">
+            <button class="tg-btn active" onclick="App.deck.setToggle(this,'deckToneToggle')">Executive</button>
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckToneToggle')">Commercial</button>
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckToneToggle')">Direct</button>
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckToneToggle')">Premium</button>
+          </div>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="flex items-center gap-8">
+          <span class="deck-tb-label">Density</span>
+          <div class="toggle-group" id="deckDensityToggle">
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckDensityToggle')">Light</button>
+            <button class="tg-btn active" onclick="App.deck.setToggle(this,'deckDensityToggle')">Standard</button>
+            <button class="tg-btn" onclick="App.deck.setToggle(this,'deckDensityToggle')">Detailed</button>
+          </div>
+        </div>
+      </div>
+      <div class="deck-body">
+        <div class="slide-nav">
+          <div class="slide-nav-title">Slides</div>
+          <div id="slideNavList"></div>
+        </div>
+        <div class="slide-preview-panel">
+          <div class="slide-card" id="slideCard">
+            <div class="slide-eyebrow" id="slideEyebrow"></div>
+            <div class="slide-title" id="slideTitle"></div>
+            <div class="slide-subtitle" id="slideSubtitle"></div>
+            <ul class="slide-bullets" id="slideBullets"></ul>
+            <div class="slide-footer-brand">Pelham Interiors · Confidential</div>
+          </div>
+        </div>
+        <div class="deck-ctrl">
+          <div class="deck-ctrl-section">
+            <div class="deck-ctrl-title">Deck actions</div>
+            <button class="panel-btn primary" onclick="App.toast('Full slide copy generated')">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              Generate full slide copy
+            </button>
+            <button class="panel-btn" onclick="App.deck.regenSlide()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Regenerate this slide
+            </button>
+            <button class="panel-btn" onclick="App.toast('HTML presentation created')">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              Create HTML presentation
+            </button>
+            <button class="panel-btn" onclick="App.toast('Outline exported')">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export outline
+            </button>
+          </div>
+          <div class="deck-ctrl-section">
+            <div class="deck-ctrl-title">Slide notes</div>
+            <div id="slideNotes" style="font-size:12px;color:var(--text-muted);line-height:1.65;">Select a slide to see presenter notes.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 5: Outreach Assets -->
+    <section id="screen-outreach" class="screen">
+      <div class="screen-eyebrow">Output</div>
+      <h1 class="screen-heading">Outreach assets</h1>
+      <p class="screen-subheading">Ready-to-use messages and conversation tools, tuned to the company analysis.</p>
+      <div class="outreach-grid" id="outreachGrid">
+        <!-- injected by JS -->
+      </div>
+    </section>
+
+    <!-- Screen 6: Settings -->
+    <section id="screen-settings" class="screen">
+      <div class="settings-max">
+        <div class="screen-eyebrow">Config</div>
+        <h1 class="screen-heading">Settings</h1>
+        <p class="screen-subheading" style="margin-bottom:24px;">Configure default behaviour, brand defaults and export preferences.</p>
+        <div class="settings-block">
+          <div class="settings-block-title">Default mode</div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Default output mode</div><div class="settings-row-sub">What the engine produces first</div></div>
+            <span class="settings-val">Seller brief</span>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Default project type</div><div class="settings-row-sub">Auto-detect unless overridden</div></div>
+            <span class="settings-val">Auto-detect</span>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Confidence threshold</div><div class="settings-row-sub">Minimum confidence to show brief</div></div>
+            <span class="settings-val">Low+</span>
+          </div>
+        </div>
+        <div class="settings-block">
+          <div class="settings-block-title">Brand defaults</div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Company name</div></div>
+            <span class="settings-val">Pelham Interiors</span>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Sender name</div><div class="settings-row-sub">Used in outreach templates</div></div>
+            <span class="settings-val">[SENDER]</span>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Primary positioning</div></div>
+            <span class="settings-val">Strategic workplace partner</span>
+          </div>
+        </div>
+        <div class="settings-block">
+          <div class="settings-block-title">Export options</div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Export format</div></div>
+            <span class="settings-val">PDF / HTML</span>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Include appendix</div><div class="settings-row-sub">Validation gaps and raw signals</div></div>
+            <span class="settings-val">Yes</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen: Saved Analyses -->
+    <section id="screen-saved" class="screen">
+      <div class="screen-eyebrow" style="padding:34px 36px 0;">Saved</div>
+      <div class="empty-state">
+        <div class="empty-state-icon">📁</div>
+        <div class="empty-state-title">No saved analyses yet</div>
+        <p class="empty-state-sub">Run your first company analysis and the results will be saved here for later.</p>
+        <button class="btn btn-accent" style="margin-top:20px;" onclick="App.nav('intake')">
+          Start a new analysis
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── UTILITY PANEL ─────────────────────────────────── -->
+  <aside class="utility-panel" id="utilityPanel">
+
+    <!-- Panel: Brief view -->
+    <div id="panel-brief">
+      <div class="panel-section">
+        <div class="panel-label">Validation gaps</div>
+        <div class="panel-card">
+          <div class="panel-card-title">What still needs confirming</div>
+          <div class="tag-cloud" id="panelGaps">
+            <!-- injected -->
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">Trigger watch</div>
+        <div class="panel-card">
+          <div class="panel-card-title">Active signals</div>
+          <div class="tag-cloud" id="panelTriggers">
+            <!-- injected -->
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">Decision-maker functions</div>
+        <div class="panel-card">
+          <div class="tag-cloud" id="panelDMs">
+            <!-- injected -->
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="panel-label">Quick actions</div>
+      <button class="panel-btn primary" onclick="App.copyLinkedinOpener()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 8h-2a4 4 0 0 0-4 4v6"/><line x1="10" y1="13" x2="16" y2="13"/></svg>
+        Copy LinkedIn opener
+      </button>
+      <button class="panel-btn" onclick="App.copyEmailOpener()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Copy email opener
+      </button>
+      <button class="panel-btn violet" onclick="App.goToDeck()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Create pitch deck
+      </button>
+      <button class="panel-btn" onclick="App.toast('Seller brief exported')">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export seller brief
+      </button>
+      <button class="panel-btn" onclick="App.regenAngle()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Regenerate angle
+      </button>
+    </div>
+
+    <!-- Panel: Outreach view -->
+    <div id="panel-outreach" style="display:none;">
+      <div class="panel-section">
+        <div class="panel-label">Channel performance</div>
+        <div class="panel-card">
+          <div class="panel-card-title">Recommended order</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+            <div class="flex items-center gap-8"><span class="tag tag-ok" style="font-size:10px;">1st</span><span style="font-size:12px;color:var(--text-secondary);">LinkedIn DM</span></div>
+            <div class="flex items-center gap-8"><span class="tag tag-accent" style="font-size:10px;">2nd</span><span style="font-size:12px;color:var(--text-secondary);">Email</span></div>
+            <div class="flex items-center gap-8"><span class="tag tag-default" style="font-size:10px;">3rd</span><span style="font-size:12px;color:var(--text-secondary);">Phone</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">Quick actions</div>
+        <button class="panel-btn primary" onclick="App.copyLinkedinOpener()">Copy LinkedIn opener</button>
+        <button class="panel-btn" onclick="App.copyEmailOpener()">Copy email opener</button>
+      </div>
+    </div>
+
+  </aside>
+
+</div><!-- end .app-shell -->
+
+<!-- Toast -->
+<div id="toast">
+  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Copied!</span>
+</div>
+
+<script>
+'use strict';
+
+/* ─────────────────────────────────────────────────────────
+   DATA
+───────────────────────────────────────────────────────── */
+const DATA = {
+  sample: { url:'https://www.acme-corp.com', company:'Acme Corporation', mode:'seller-brief', notes:'Target as premium HQ fit-out opportunity' },
+  sectors: ['Technology','Professional Services','Financial Services','Legal','Healthcare','Media & Creative','Consulting','Real Estate','Marketing & PR','Architecture & Design','Engineering','Recruitment','Accounting & Finance','EdTech','Fintech','Insurance'],
+  angles: ['Workplace refresh / fit-out','Office relocation','Post-merger consolidation','Hybrid workspace transformation','HQ upgrade opportunity'],
+  triggers: [
+    'Lease renewal approaching (18–36 months)','Recent headcount growth visible on LinkedIn','Post-pandemic return-to-office initiative','Merger or acquisition activity','New CEO or leadership appointment','Business restructuring signals','Relocation signals on job boards','Job postings for facilities / workplace roles','Planning permission activity in their area','Press coverage of expansion or investment round','Series B or C funding announced','New office opening or secondary site'
+  ],
+  buyingMotions: ['Commercial / value-led','Relationship-led','Process-driven (RFP / tender)','Founder-led (fast decisions)','Committee-led (longer cycle)'],
+  projectLabels: { auto:'Full fit-out', fitout:'Full fit-out', refurb:'Refurbishment', relocation:'Relocation support', reconfig:'Reconfiguration', expansion:'Expansion fit-out', consolidation:'Consolidation / rightsizing', consultancy:'Workplace consultancy', furniture:'Furniture / move management' },
+  timings: ['6–12 months','12–18 months','18–36 months','Immediate / active brief possible'],
+  gapPool: ['Lease expiry date not confirmed','Headcount trajectory needs validation','No named workplace contact identified','Current premises size unknown','Budget cycle timing unclear','Previous fit-out contractor unknown','Decision-maker seniority not confirmed','Pain points not yet established','Workspace vision / strategy unknown'],
+  dmPool: ['Facilities Manager','Head of Workplace','Operations Director','COO','Head of Real Estate','CFO (budget sign-off)','CEO / Founder','Head of HR & People','Director of Office Operations'],
+  locations: ['Central London','the City of London','Canary Wharf','the West End','North London','South London','the M25 corridor','Manchester city centre','Birmingham','Bristol','Reading','Leeds','Edinburgh','the South East','East London'],
+  openerScripts: [
+    '"Hi [NAME] — quick question: is your current workspace keeping pace with how your team actually works today?"',
+    '"We work with [SECTOR] businesses on their office projects. Is space something [COMPANY] is actively thinking about?"',
+    '"Your growth trajectory at [COMPANY] looks impressive. Are your offices still set up for where the business is heading?"'
+  ],
+  discoveries: [
+    'How many people are using your offices on a typical day right now?',
+    'When does your current lease expire — have you started thinking about next steps?',
+    'Is your workspace set up for how your team works now, or how they worked pre-2020?',
+    'Who internally owns the relationship with your office space?',
+    'Have you done any significant work to your space in the last five years?',
+    'Are you expecting meaningful headcount growth in the next 24 months?',
+    'Does your current space reflect the brand and culture you want to project?'
+  ],
+  objections: [
+    '"Not looking at this right now" → "When does your lease run to? That\'s usually the forcing function."',
+    '"We already have a supplier" → "Good to know — we\'re positioning for future projects, not replacing anyone."',
+    '"Not in budget this year" → "Is that a timing question or a priority question? Those need different conversations."',
+    '"Happy with our current space" → "What made the last fit-out work well? I\'m genuinely curious."',
+    '"Send me an email" → "Of course — what\'s the context I should write to? What\'s most live for you right now?"'
+  ]
+};
+
+/* ─────────────────────────────────────────────────────────
+   UTILITIES
+───────────────────────────────────────────────────────── */
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function pickN(arr,n){ const s=[...arr]; for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];}return s.slice(0,n); }
+function weightedPick(arr){ return pick(arr); }
+function cap(str){ return str.charAt(0).toUpperCase()+str.slice(1); }
+/** Encode HTML entities to prevent XSS when interpolating into innerHTML. */
+function escHtml(s){
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+function extractDomain(url){
+  try {
+    const u = new URL(url.startsWith('http')?url:'https://'+url);
+    return u.hostname.replace(/^www\./,'');
+  } catch(e){ return url.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]; }
+}
+function isValidUrl(v){
+  const s = v.trim();
+  if(s.length === 0) return false;
+  try { new URL(s.startsWith('http')?s:'https://'+s); return true; } catch(e){ return false; }
+}
+function inferSector(domain, company){
+  const d = (domain+' '+company).toLowerCase();
+  if(/tech|soft|digital|cloud|data|ai|ml|saas|cyber|dev|code|app/.test(d)) return 'Technology';
+  if(/law|legal|solicitor|barrister|llp/.test(d)) return 'Legal';
+  if(/health|medical|pharma|clinic|nhs|care/.test(d)) return 'Healthcare';
+  if(/finance|capital|invest|asset|fund|wealth|bank/.test(d)) return 'Financial Services';
+  if(/media|creative|design|agency|studio|brand|pr|marketing/.test(d)) return 'Media & Creative';
+  if(/consult|advisory|strategy|partner/.test(d)) return 'Consulting';
+  if(/property|estate|reit|land/.test(d)) return 'Real Estate';
+  if(/recruit|talent|hr|people/.test(d)) return 'Recruitment';
+  if(/account|audit|tax|cpa/.test(d)) return 'Accounting & Finance';
+  if(/edu|school|university|learn|train/.test(d)) return 'EdTech';
+  if(/insur|assur|underwrite/.test(d)) return 'Insurance';
+  return 'Professional Services';
+}
+function coName(company, domain){
+  if(company && company.trim()) return company.trim();
+  const base = domain.split('.')[0].replace(/-/g,' ').replace(/_/g,' ');
+  return base.split(' ').map(w=>cap(w)).join(' ');
+}
+
+/* ─────────────────────────────────────────────────────────
+   MOCK ANALYSIS
+───────────────────────────────────────────────────────── */
+function generateAnalysis(url, company, mode, project, notes){
+  const domain = extractDomain(url);
+  const name   = coName(company, domain);
+  const sector = inferSector(domain, name);
+  const location = pick(DATA.locations);
+  const attractiveness  = weightedPick(['High','High','High','Medium','Medium','Medium']);
+  const conf     = weightedPick(['High','High','Medium','Medium','Low']);
+  const angle    = pick(DATA.angles);
+  const timing   = pick(DATA.timings);
+  const triggers = pickN(DATA.triggers, 3);
+  const gaps     = pickN(DATA.gapPool, 3);
+  const dms      = pickN(DATA.dmPool, 4);
+  const buying   = pick(DATA.buyingMotions);
+  const projLabel = DATA.projectLabels[project] || pick(Object.values(DATA.projectLabels));
+  const initials  = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const discoveries = pickN(DATA.discoveries, 5);
+  const objections  = pickN(DATA.objections, 4);
+  const opener  = pick(DATA.openerScripts).replace('[SECTOR]',sector).replace('[COMPANY]',name);
+
+  // Text blocks
+  const targetText = `${name} is a ${sector} business operating from ${location}. They show visible signs of commercial activity and growth, making them a realistic fit-out or workplace project candidate for Pelham at the right moment in their property cycle. The business appears to be at a stage where the quality and configuration of their physical workspace is becoming a strategic consideration, not just an operational one.`;
+
+  const reasonText = `${name} has characteristics consistent with a company approaching an active or near-term commercial property decision. ${sector} businesses at this growth stage typically face the tension between workspace quality and headcount pressure — a tension Pelham is well positioned to resolve. The combination of sector dynamics and visible commercial signals makes this an account worth qualifying proactively rather than reactively.`;
+
+  const triggerText = `Recent commercial signals suggest ${name} may be approaching a workplace inflection point.\n\n• ${triggers[0]} — a notable commercial signal worth monitoring.\n• ${triggers[1]} — this compounds the timing relevance significantly.\n• ${triggers[2]} — further corroboration of near-term opportunity.\n\nLease cycles and business maturity make a renewal, relocation or reconfiguration plausible within ${timing}. This is a proactive play, not a reactive one.`;
+
+  const angleText = `Position Pelham as a strategic workplace partner — not a fit-out contractor. The opening conversation with ${name} should centre on their workspace vision, not our services.\n\nLead with the question: "How is your current space supporting the way your team actually works today?"\n\nFor a ${sector} business, workspace quality connects directly to talent attraction, retention and culture. The strongest angle here is ${angle} — approach this as a business conversation, not a capability presentation.`;
+
+  const contactText = `Target Facilities, Workplace or Operations contacts first at ${name} — these functions own the day-to-day space pain. Finance and leadership (${dms.slice(-2).join(', ')}) enter at budget and sign-off stage.\n\nMost likely entry points:\n• ${dms[0]} — owns operational space\n• ${dms[1]} — carries workplace mandate\n• ${dms[2]} — budget and strategic alignment\n\nCheck LinkedIn for anyone with Workplace, Facilities, Real Estate or Office Management in their title. Recent joiners in these functions are a particularly strong signal.`;
+
+  const nextText = `Key validation actions for ${name}:\n\n• Confirm lease position and renewal timeline — this is the primary gating question\n• Validate headcount trajectory via LinkedIn company page growth rate\n• Identify the named individual carrying workspace responsibility\n• Check for recent hires in facilities, workplace or operations functions\n• Run a Companies House check: company age, size, registered address, accounts\n• Search for any planning applications or lease transactions in their area`;
+
+  const linkedinOpener = `Hi [NAME], I came across ${name} and was curious about how you're managing your workspace as the team grows. We work with businesses at exactly the inflection point where space starts to constrain rather than enable. Pelham Interiors — fit-outs and workplace projects. Worth a quick conversation?`;
+
+  const emailOpener = `Subject: ${name} — workspace conversation\n\nHi [NAME],\n\nI noticed ${name} has been growing and wanted to reach out about your current workspace setup.\n\nPelham works with businesses at exactly the point where space starts to feel like a constraint rather than an enabler — and from what I can see of ${name}, you might be approaching that moment.\n\nWorth a call to compare notes?\n\nBest,\n[SENDER]\nPelham Interiors`;
+
+  const callOpener = `"Hi [NAME] — my name is [SENDER] from Pelham Interiors. We work with ${sector} businesses on their office and workspace projects. Quick question — is your current space set up for how your team works today, or is that something you're starting to think about?" [Pause, listen] "That's interesting — what's driving that thinking?"`;
+
+  const miniOutline = [`Cover: ${name} × Pelham Interiors`,`Executive summary: why we're talking`,`Understanding ${name}: what we know`,`Why now: the commercial signals we see`,`The Pelham angle: ${angle}`,`What good looks like: relevant proof`,`Recommended next step`];
+
+  return { name, domain, sector, location, attractiveness, conf, angle, timing, triggers, gaps, dms, buying, projLabel, initials, discoveries, objections, opener, targetText, reasonText, triggerText, angleText, contactText, nextText, linkedinOpener, emailOpener, callOpener, miniOutline, mode, project };
+}
+
+/* ─────────────────────────────────────────────────────────
+   SLIDES
+───────────────────────────────────────────────────────── */
+function generateSlides(a){
+  return [
+    { name:'Cover', eyebrow:'Pelham Interiors', title:`${a.name} × Pelham`, subtitle:`A focused workspace opportunity — ${a.sector}`, bullets:[], notes:`Opening slide. Set the context: this is a targeted brief for ${a.name}, not a generic pitch.` },
+    { name:'Executive summary', eyebrow:'Overview', title:'Why we are talking', subtitle:`The commercial case for a Pelham conversation with ${a.name}`, bullets:[`${a.name} is a ${a.sector} business showing visible workplace signals`,`Primary angle: ${a.angle}`,`Confidence level: ${a.conf} — multiple independent signals align`,`Estimated timing window: ${a.timing}`,`Entry point: Facilities, Workplace or Operations`], notes:'Keep this tight. One slide, one story. The goal is to earn a second meeting, not explain everything.' },
+    { name:'Understanding the business', eyebrow:'Company context', title:`About ${a.name}`, subtitle:`What the commercial intelligence tells us`, bullets:[`${a.sector} business operating from ${a.location}`,`Visible signs of growth and commercial momentum`,`Workspace likely at or approaching a strategic decision point`,`Team structure suggests facilities / workplace ownership exists`,`Operating maturity consistent with a fit-out or refurbishment candidate`], notes:'Keep language factual and confident. Avoid speculation — only state what the signals support.' },
+    { name:'Why now', eyebrow:'Timing', title:'The signals we are seeing', subtitle:`Why the timing makes ${a.name} worth contacting now`, bullets:a.triggers.concat([`Timing window: ${a.timing}`,`Confidence rating: ${a.conf}`]), notes:'This is the commercial hook. If they ask how we know, be transparent: we research every account before reaching out.' },
+    { name:'Key challenge', eyebrow:'The problem we solve', title:'Where space starts to constrain', subtitle:'What businesses at this stage typically experience', bullets:['Headcount has grown but space has not kept pace','Hybrid working has changed how space is actually used','Existing fit-out no longer reflects the brand or culture','Facilities team is managing reactive maintenance, not strategic planning','No clear owner of the workspace vision'], notes:'Position the problem before the solution. Make ${a.name} recognise themselves in this slide.' },
+    { name:'Pelham angle', eyebrow:'Our positioning', title:a.angle, subtitle:`How Pelham uniquely addresses this for ${a.name}`, bullets:[`Lead with workspace vision — not a product pitch`,'Pelham works as a strategic partner from brief through delivery','We handle the full journey: design, build, furniture, move management','Our approach: understand the business first, then solve for the space',`Outcome focus: space that earns its cost per head every working day`], notes:'The key message: Pelham is not a contractor. We are a workplace intelligence partner who also builds beautifully.' },
+    { name:'Capabilities', eyebrow:'What we do', title:'How Pelham works', subtitle:'End-to-end workplace delivery', bullets:['Commercial fit-out and Category A/B works','Workplace consultancy and space strategy','Furniture procurement and specification','Move management and transition planning','Post-occupancy evaluation and optimisation'], notes:'Keep this factual and brief. Capabilities earn credibility — they do not close deals. The story does.' },
+    { name:'Business outcomes', eyebrow:'Value delivered', title:'What good looks like', subtitle:'The measurable outcomes we deliver for clients', bullets:['Space that genuinely supports how people work today','Reduced cost per square metre through intelligent design','Improved employee experience and talent retention','A workspace that reflects and reinforces brand identity','Projects delivered on time, on budget, with minimal disruption'], notes:'Outcome language, not feature language. How does this make the CFO and CEO feel? Confident, in control, proud.' },
+    { name:'Delivery approach', eyebrow:'How we work', title:'The Pelham process', subtitle:'From brief to building in five stages', bullets:['01 · Brief: understand the business, not just the space','02 · Design: workplace strategy to concept to technical','03 · Build: programme managed, quality controlled','04 · Furnish: specification, procurement, installation','05 · Handover: post-occupancy check and lessons captured'], notes:'Clients want certainty. This slide says: we have done this before, we know what we are doing, you are in safe hands.' },
+    { name:'Relevant proof', eyebrow:'Case studies', title:'Clients we have helped at this moment', subtitle:'Businesses like yours, at the same inflection point', bullets:[`${a.sector} business — relocated and refitted 12,000 sq ft in 14 weeks`,'Professional services firm — redesigned for hybrid, reduced footprint by 30%','Growth-stage company — first purpose-built HQ, delivered pre-Series B','Post-merger integration — two offices consolidated into one cohesive environment','Historic building — full Category B fit-out, Grade II listed, on budget'], notes:'If you have a real case study from this sector, replace this slide. Generic proof is better than no proof — specific proof is best.' },
+    { name:'Recommended next step', eyebrow:'Next step', title:'What we suggest', subtitle:'A low-commitment way to start the conversation', bullets:['A 30-minute discovery call — no presentation, just questions','We will share what we observed and you can correct our assumptions','If there is a fit, we will propose a paid workplace brief','No obligation. No pitch. Just a conversation between two professionals.',`Contact: [SENDER] · Pelham Interiors`], notes:'Lower the barrier. The ask is a conversation, not a decision. Make it easy to say yes.' },
+    { name:'Close', eyebrow:'Pelham Interiors', title:'Thank you', subtitle:`${a.name} × Pelham · Confidential`, bullets:['Pelham Interiors — strategic workplace delivery','pelhaminteriors.co.uk','[SENDER] · [EMAIL] · [PHONE]'], notes:'Clean, confident close. Contact details visible. No clutter.' }
+  ];
+}
+
+/* ─────────────────────────────────────────────────────────
+   APP
+───────────────────────────────────────────────────────── */
+const App = {
+  state: { analysis: null, slides: [], currentSlide: 0 },
+
+  /* ── Navigation ─────────────────────────────────────── */
+  nav(target, el){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const scr = document.getElementById('screen-'+target);
+    if(scr) scr.classList.add('active');
+
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    const activeNav = el || document.querySelector(`.nav-item[data-target="${target}"]`);
+    if(activeNav) activeNav.classList.add('active');
+
+    // Panel / grid logic
+    const shell = document.getElementById('appShell');
+    const panel = document.getElementById('utilityPanel');
+    document.getElementById('panel-brief').style.display = 'none';
+    document.getElementById('panel-outreach').style.display = 'none';
+
+    if(target === 'brief'){
+      shell.classList.remove('no-panel');
+      panel.style.display = '';
+      document.getElementById('panel-brief').style.display = '';
+    } else if(target === 'outreach'){
+      shell.classList.remove('no-panel');
+      panel.style.display = '';
+      document.getElementById('panel-outreach').style.display = '';
+    } else {
+      shell.classList.add('no-panel');
+      panel.style.display = 'none';
+    }
+  },
+
+  /* ── Intake ─────────────────────────────────────────── */
+  loadSample(){
+    const s = DATA.sample;
+    document.getElementById('inp-url').value     = s.url;
+    document.getElementById('inp-company').value = s.company;
+    document.getElementById('inp-mode').value    = s.mode;
+    document.getElementById('inp-notes').value   = s.notes;
+    document.getElementById('err-url').classList.remove('visible');
+  },
+
+  startAnalysis(){
+    const url  = document.getElementById('inp-url').value.trim();
+    const err  = document.getElementById('err-url');
+    if(!isValidUrl(url)){ err.classList.add('visible'); err.setAttribute('aria-live','polite'); document.getElementById('inp-url').focus(); return; }
+    err.classList.remove('visible');
+
+    const company = document.getElementById('inp-company').value.trim();
+    const mode    = document.getElementById('inp-mode').value;
+    const project = document.getElementById('inp-project').value;
+    const notes   = document.getElementById('inp-notes').value.trim();
+
+    this.state.analysis = generateAnalysis(url, company, mode, project, notes);
+    this.nav('progress');
+    this._runProgress();
+  },
+
+  _runProgress(){
+    const a = this.state.analysis;
+    const steps = document.querySelectorAll('.step-row');
+    const bar   = document.getElementById('progressBar');
+    const checkSvg = `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+    // Metric updates per step
+    const metricUpdates = [
+      ()=>{ document.getElementById('m-web').textContent='Online'; document.getElementById('m-web').classList.remove('dim'); },
+      ()=>{ document.getElementById('m-pages').textContent='8 pages'; document.getElementById('m-pages').classList.remove('dim'); },
+      ()=>{ document.getElementById('m-signals').textContent=String(Math.floor(Math.random()*6)+5); document.getElementById('m-signals').classList.remove('dim'); },
+      ()=>{ document.getElementById('m-conf').textContent=a.conf; document.getElementById('m-conf').classList.remove('dim'); },
+      ()=>{ document.getElementById('m-angle').textContent=a.angle.split('/')[0].trim(); document.getElementById('m-angle').classList.remove('dim'); },
+      ()=>{}
+    ];
+    const progressPcts = [14, 30, 47, 64, 82, 100];
+
+    // Reset
+    steps.forEach(s=>{ s.classList.remove('is-active','is-done'); s.querySelector('.step-circle').innerHTML = s.dataset.step*1+1; });
+    bar.style.width = '0%';
+
+    let i = 0;
+    const tick = ()=>{
+      if(i>0){
+        steps[i-1].classList.remove('is-active');
+        steps[i-1].classList.add('is-done');
+        steps[i-1].querySelector('.step-circle').innerHTML = checkSvg;
+      }
+      if(i < steps.length){
+        steps[i].classList.add('is-active');
+        bar.style.width = progressPcts[i]+'%';
+        metricUpdates[i]();
+        i++;
+        setTimeout(tick, 620);
+      } else {
+        bar.style.width = '100%';
+        setTimeout(()=>this._showBrief(), 700);
+      }
+    };
+    tick();
+  },
+
+  /* ── Brief ──────────────────────────────────────────── */
+  _showBrief(){
+    const a = this.state.analysis;
+    this._populateBrief(a);
+    this._populatePanel(a);
+    this._populateOutreach(a);
+    this.nav('brief');
+  },
+
+  _populateBrief(a){
+    document.getElementById('briefAvatar').textContent = a.initials;
+    document.getElementById('briefCompany').textContent = a.name;
+    document.getElementById('briefDomain').textContent = a.domain;
+    document.getElementById('briefSector').textContent = a.sector;
+
+    const attrEl = document.getElementById('briefAttract');
+    attrEl.textContent = a.attractiveness+' attractiveness';
+    attrEl.className = 'badge badge-'+(a.attractiveness==='High'?'high':a.attractiveness==='Medium'?'medium':'low');
+
+    document.getElementById('briefAngle').textContent = a.angle;
+
+    const confEl = document.getElementById('briefConf');
+    confEl.textContent = a.conf+' confidence';
+    confEl.className = 'badge badge-conf-'+(a.conf==='High'?'high':a.conf==='Medium'?'medium':'low');
+
+    document.getElementById('sum-angle').textContent = a.angle;
+    document.getElementById('sum-trigger').textContent = a.triggers[0].split('(')[0].trim();
+    document.getElementById('sum-project').textContent = a.projLabel;
+    document.getElementById('sum-buying').textContent = a.buying;
+
+    // Build brief cards
+    const cards = [
+      { num:1, title:'Target', sub:'Company overview and attractiveness', content: this._para(a.targetText) },
+      { num:2, title:'Reason', sub:'What makes this commercially interesting', content: this._para(a.reasonText) },
+      { num:3, title:'Trigger', sub:'Why now may be relevant', content: this._para(a.triggerText) },
+      { num:4, title:'Angle', sub:'The strongest Pelham positioning', content: this._para(a.angleText) },
+      { num:5, title:'Contact strategy', sub:'Who likely cares, who to approach first', content: this._para(a.contactText) },
+      { num:6, title:'Next step', sub:'What still needs validating', content: this._para(a.nextText) },
+      { num:7, title:'Outreach message', sub:'LinkedIn opener + email opener', content: this._outreachBlock(a), open:true },
+      { num:8, title:'Bonus seller tools', sub:'Scripts, objections, discovery questions, mini deck', content: this._bonusBlock(a), open:true }
+    ];
+
+    const container = document.getElementById('briefCards');
+    container.innerHTML = cards.map(c=>`
+      <div class="bcard${c.open?' open':''}">
+        <div class="bcard-hd" onclick="App.toggleCard(this)">
+          <div class="bcard-hd-left">
+            <div class="bcard-num">${c.num}</div>
+            <div>
+              <div class="bcard-title">${c.title}</div>
+              <div class="bcard-sub">${c.sub}</div>
+            </div>
+          </div>
+          <svg class="bcard-chevron" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="bcard-body">
+          <div class="bcard-text">${c.content}</div>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  _para(text){
+    return text.split('\n').filter(l=>l.trim()).map(l=>{
+      if(l.startsWith('•')) return `<p style="padding-left:12px;border-left:2px solid rgba(0,212,255,.2);">${escHtml(l.slice(1).trim())}</p>`;
+      return `<p>${escHtml(l)}</p>`;
+    }).join('');
+  },
+
+  _outreachBlock(a){
+    return `
+      <div class="outreach-msg">
+        <div class="outreach-msg-label">LinkedIn opener</div>
+        <div class="outreach-msg-text" id="liMsg">${escHtml(a.linkedinOpener)}</div>
+        <button class="btn-copy" onclick="App.copyText(document.getElementById('liMsg').textContent)">Copy</button>
+      </div>
+      <div class="outreach-msg" style="margin-top:10px;">
+        <div class="outreach-msg-label">Email opener</div>
+        <div class="outreach-msg-text" id="emMsg">${escHtml(a.emailOpener)}</div>
+        <button class="btn-copy" onclick="App.copyText(document.getElementById('emMsg').textContent)">Copy</button>
+      </div>
+    `;
+  },
+
+  _bonusBlock(a){
+    const discHtml = a.discoveries.map(d=>`<li>${escHtml(d)}</li>`).join('');
+    const objHtml  = a.objections.map(o=>`<li>${escHtml(o)}</li>`).join('');
+    const deckHtml = a.miniOutline.map(d=>`<li>${escHtml(d)}</li>`).join('');
+    return `
+      <div class="bonus-grid">
+        <div class="bonus-item">
+          <h4>Quick opener script</h4>
+          <p style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;font-style:italic;">${escHtml(a.opener)}</p>
+        </div>
+        <div class="bonus-item">
+          <h4>Likely objections</h4>
+          <ul>${objHtml}</ul>
+        </div>
+        <div class="bonus-item">
+          <h4>Discovery questions</h4>
+          <ul>${discHtml}</ul>
+        </div>
+        <div class="bonus-item">
+          <h4>Mini deck outline</h4>
+          <ul>${deckHtml}</ul>
+        </div>
+      </div>
+    `;
+  },
+
+  _populatePanel(a){
+    document.getElementById('panelGaps').innerHTML = a.gaps.map(g=>`<span class="tag tag-warn">${escHtml(g)}</span>`).join('');
+    document.getElementById('panelTriggers').innerHTML = a.triggers.map(t=>`<span class="tag tag-ok" style="font-size:10px;">${escHtml(t.split('(')[0].trim())}</span>`).join('');
+    document.getElementById('panelDMs').innerHTML = a.dms.map(d=>`<span class="tag tag-accent">${escHtml(d)}</span>`).join('');
+  },
+
+  _populateOutreach(a){
+    const grid = document.getElementById('outreachGrid');
+    const modules = [
+      { icon:'💼', title:'LinkedIn opener', body: a.linkedinOpener, actions:[{label:'Copy',fn:`App.copyText(this.previousElementSibling.textContent)`,cls:'btn-accent btn-sm'},{label:'Shorten',fn:`App.toast('Shortened version generated')`,cls:'btn btn-ghost btn-sm'}] },
+      { icon:'✉️', title:'Email opener', body: a.emailOpener, actions:[{label:'Copy',fn:`App.copyText(this.previousElementSibling.textContent)`,cls:'btn-accent btn-sm'},{label:'Make punchier',fn:`App.toast('Punchier version generated')`,cls:'btn btn-ghost btn-sm'}] },
+      { icon:'📞', title:'Call opener', body: a.callOpener, actions:[{label:'Copy',fn:`App.copyText(this.previousElementSibling.textContent)`,cls:'btn-accent btn-sm'}] },
+      { icon:'🔍', title:'Discovery questions', isList:true, items: a.discoveries, actions:[{label:'Copy all',fn:`App.toast('Questions copied')`,cls:'btn-accent btn-sm'}] },
+      { icon:'🛡️', title:'Likely objections', isList:true, items: a.objections, actions:[{label:'Copy all',fn:`App.toast('Objections copied')`,cls:'btn-accent btn-sm'}] },
+      { icon:'📋', title:'Mini pitch outline', isList:true, items: a.miniOutline, actions:[{label:'Copy',fn:`App.toast('Outline copied')`,cls:'btn-accent btn-sm'},{label:'Build deck',fn:`App.goToDeck()`,cls:'btn btn-ghost btn-sm'}] }
+    ];
+
+    grid.innerHTML = modules.map((m,mi)=>{
+      const bodyId = `omBody_${mi}`;
+      const bodyHtml = m.isList
+        ? `<ul class="omodule-list" id="${bodyId}">${m.items.map(i=>`<li>${escHtml(i)}</li>`).join('')}</ul>`
+        : `<div class="omodule-body" id="${bodyId}">${escHtml(m.body)}</div>`;
+      const actHtml = m.actions.map(ac=>`<button class="${ac.cls||'btn-accent btn-sm'}" onclick="${ac.fn}">${ac.label}</button>`).join('');
+      return `
+        <div class="omodule">
+          <div class="omodule-hd">
+            <div class="omodule-title"><div class="omodule-icon">${m.icon}</div>${m.title}</div>
+          </div>
+          ${bodyHtml}
+          <div class="omodule-actions">${actHtml}</div>
+        </div>`;
+    }).join('');
+  },
+
+  toggleCard(hd){
+    hd.closest('.bcard').classList.toggle('open');
+  },
+
+  /* ── Copy helpers ───────────────────────────────────── */
+  copyText(text){
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(()=>this.toast('Copied to clipboard'));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); /* legacy fallback for older browsers */ document.body.removeChild(ta);
+      this.toast('Copied to clipboard');
+    }
+  },
+  copyLinkedinOpener(){
+    if(this.state.analysis) this.copyText(this.state.analysis.linkedinOpener);
+    else this.toast('Run an analysis first');
+  },
+  copyEmailOpener(){
+    if(this.state.analysis) this.copyText(this.state.analysis.emailOpener);
+    else this.toast('Run an analysis first');
+  },
+
+  toast(msg='Copied!'){
+    const t  = document.getElementById('toast');
+    const tm = document.getElementById('toastMsg');
+    tm.textContent = msg;
+    t.classList.add('visible');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(()=>t.classList.remove('visible'), 2200);
+  },
+
+  /* ── Deck ───────────────────────────────────────────── */
+  goToDeck(){
+    if(!this.state.analysis){ this.toast('Run an analysis first'); return; }
+    const a = this.state.analysis;
+    this.state.slides = generateSlides(a);
+    this.state.currentSlide = 0;
+    document.getElementById('deckTitleInput').value = `${a.name} — Pelham Pitch`;
+    this._buildSlideNav();
+    this._renderSlide(0);
+    this.nav('deck');
+  },
+
+  _buildSlideNav(){
+    const nav = document.getElementById('slideNavList');
+    nav.innerHTML = this.state.slides.map((s,i)=>`
+      <div class="slide-nav-item${i===0?' active':''}" onclick="App.deck.selectSlide(${i})">
+        <div class="slide-nav-num">${i+1}</div>
+        <div class="slide-nav-lbl">${escHtml(s.name)}</div>
+      </div>
+    `).join('');
+  },
+
+  _renderSlide(i){
+    const s = this.state.slides[i];
+    document.getElementById('slideEyebrow').textContent = s.eyebrow;
+    document.getElementById('slideTitle').textContent   = s.title;
+    document.getElementById('slideSubtitle').textContent = s.subtitle;
+    document.getElementById('slideBullets').innerHTML = s.bullets.map(b=>`<li class="slide-bullet">${escHtml(b)}</li>`).join('');
+    document.getElementById('slideNotes').textContent = s.notes || 'No presenter notes for this slide.';
+
+    document.querySelectorAll('.slide-nav-item').forEach((el,idx)=>el.classList.toggle('active',idx===i));
+    this.state.currentSlide = i;
+  },
+
+  deck: {
+    selectSlide(i){ App._renderSlide(i); },
+    setToggle(btn, groupId){
+      const group = document.getElementById(groupId);
+      group.querySelectorAll('.tg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    },
+    regenSlide(){
+      App.toast('Slide regenerated');
+    }
+  },
+
+  regenAngle(){
+    if(!this.state.analysis) return;
+    const a = this.state.analysis;
+    a.angle = pick(DATA.angles.filter(x=>x!==a.angle));
+    document.getElementById('briefAngle').textContent = a.angle;
+    document.getElementById('sum-angle').textContent  = a.angle;
+    this.toast('Angle regenerated: '+a.angle);
+  },
+
+  /* ── Init ───────────────────────────────────────────── */
+  init(){
+    // Start with no panel
+    document.getElementById('appShell').classList.add('no-panel');
+    document.getElementById('utilityPanel').style.display = 'none';
+  }
+};
+
+App.init();
+</script>
+</body>
+</html>
