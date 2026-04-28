@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Don't leak the framework in response headers in production.
   poweredByHeader: false,
-  // Fail the production build on type or lint errors so broken code
-  // never reaches Vercel/Netlify.
+  // Fail the production build on type errors so broken code never
+  // reaches Vercel/Netlify.
   typescript: {
     ignoreBuildErrors: false,
   },

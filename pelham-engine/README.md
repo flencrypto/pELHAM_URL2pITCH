@@ -83,7 +83,7 @@ The app is a standard Next.js 16 application with both static and SSR routes (`/
 
 ### Vercel
 
-A `vercel.json` is included with the framework, build commands and security headers.
+A `vercel.json` is included for Vercel/framework build configuration. Security headers are defined in `next.config.ts` via `headers()` and apply on both platforms.
 
 1. Import the repo into Vercel.
 2. **Set the Project's Root Directory to `pelham-engine`** (Project → Settings → General → Root Directory). This is required because the Next.js app lives in a subfolder.
