@@ -76,3 +76,27 @@ pelham-engine/
 ## Notes
 
 All analysis currently runs client-side using the mock engine. It can be wired to a real LLM backend when available.
+
+## Deployment
+
+The app is a standard Next.js 16 application with both static and SSR routes (`/analysis/[id]` and friends are server-rendered). It is **not** a static export — both target platforms run it on a Node serverless runtime.
+
+### Vercel
+
+A `vercel.json` is included with the framework, build commands and security headers.
+
+1. Import the repo into Vercel.
+2. **Set the Project's Root Directory to `pelham-engine`** (Project → Settings → General → Root Directory). This is required because the Next.js app lives in a subfolder.
+3. Vercel will auto-detect Next.js and deploy. No environment variables are needed.
+
+### Netlify
+
+A `netlify.toml` at the repo root tells Netlify to build from `pelham-engine/` using the official `@netlify/plugin-nextjs` adapter, which handles SSR routes.
+
+1. Connect the repo to Netlify — accept the defaults (config is read from `netlify.toml`).
+2. Netlify auto-installs `@netlify/plugin-nextjs` on first build.
+3. No environment variables are needed.
+
+### Node version
+
+Both platforms pin to Node 20 (LTS) via `pelham-engine/.nvmrc` and `NODE_VERSION` in `netlify.toml`.

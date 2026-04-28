@@ -1,0 +1,24 @@
+# Netlify configuration for the Pelham Prospecting Engine.
+#
+# The deployable application is the Next.js app in `pelham-engine/`.
+# `base` tells Netlify to `cd` into that directory before installing
+# and building, and `publish` is resolved relative to `base`.
+#
+# The official @netlify/plugin-nextjs adapter handles SSR routes,
+# image optimization, and middleware for Next.js on Netlify.
+
+[build]
+  base    = "pelham-engine"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Pin Node to an LTS that Next.js 16 supports.
+  NODE_VERSION = "20"
+  # Faster, deterministic installs in CI.
+  NPM_FLAGS    = "--no-audit --no-fund"
+  # Disable Next.js telemetry in production builds.
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
